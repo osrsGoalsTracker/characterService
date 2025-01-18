@@ -12,24 +12,25 @@ import com.osrsGoalTracker.character.repository.CharacterRepository;
 import com.osrsGoalTracker.character.repository.impl.CharacterRepositoryImpl;
 import com.osrsGoalTracker.character.service.CharacterService;
 import com.osrsGoalTracker.character.service.impl.CharacterServiceImpl;
-import com.osrsGoalTracker.character.dao.CharacterDao;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+
 class CharacterModuleTest {
 
-    private CharacterDao mockCharacterDao;
+    private DynamoDbClient mockDynamoDbClient;
     private Injector injector;
 
     @BeforeEach
     void setUp() {
-        mockCharacterDao = mock(CharacterDao.class);
+        mockDynamoDbClient = mock(DynamoDbClient.class);
 
         AbstractModule testModule = new AbstractModule() {
             @Override
             protected void configure() {
-                bind(CharacterDao.class).toInstance(mockCharacterDao);
+                bind(DynamoDbClient.class).toInstance(mockDynamoDbClient);
             }
         };
 

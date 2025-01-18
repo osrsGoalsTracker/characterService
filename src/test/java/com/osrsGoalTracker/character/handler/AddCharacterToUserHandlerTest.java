@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,7 +43,7 @@ class AddCharacterToUserHandlerTest {
         // Given
         String userId = "testUser123";
         String characterName = "TestChar";
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         Character character = Character.builder()
                 .name(characterName)

@@ -10,7 +10,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.osrsGoalTracker.character.di.CharacterModule;
-import com.osrsGoalTracker.character.handler.response.AddCharacterToUserResponse;
+import com.osrsGoalTracker.character.model.Character;
 import com.osrsGoalTracker.character.service.CharacterService;
 import com.osrsGoalTracker.utils.JsonUtils;
 
@@ -54,8 +54,8 @@ public class AddCharacterToUserHandler
         log.info("HOWDY Received request to add player to user");
         try {
             UserCharacterPair userCharacterPair = parseAndValidateInput(input);
-            AddCharacterToUserResponse response = executeRequest(userCharacterPair);
-            return createSuccessResponse(response);
+            Character character = executeRequest(userCharacterPair);
+            return createSuccessResponse(character);
         } catch (IllegalArgumentException e) {
             return buildErrorResponse(e.getMessage());
         } catch (Exception e) {
@@ -91,19 +91,15 @@ public class AddCharacterToUserHandler
         return new UserCharacterPair(userId.trim(), characterName.trim());
     }
 
-    private AddCharacterToUserResponse executeRequest(UserCharacterPair userCharacterPair) {
+    private Character executeRequest(UserCharacterPair userCharacterPair) {
         log.info("Adding character {} to user {}", userCharacterPair.characterName(), userCharacterPair.userId());
-        characterService.addCharacterToUser(userCharacterPair.userId(), userCharacterPair.characterName());
-        return AddCharacterToUserResponse.builder()
-                .userId(userCharacterPair.userId())
-                .characterName(userCharacterPair.characterName())
-                .build();
+        return characterService.addCharacterToUser(userCharacterPair.userId(), userCharacterPair.characterName());
     }
 
-    private APIGatewayProxyResponseEvent createSuccessResponse(AddCharacterToUserResponse response) {
+    private APIGatewayProxyResponseEvent createSuccessResponse(Character character) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(HTTP_OK)
-                .withBody(JsonUtils.toJson(response));
+                .withBody(JsonUtils.toJson(character));
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String message) {

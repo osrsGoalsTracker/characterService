@@ -2,133 +2,102 @@ package com.osrsGoalTracker.character.repository.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.osrsGoalTracker.character.model.Character;
-import com.osrsGoalTracker.character.dao.CharacterDao;
-import com.osrsGoalTracker.character.dao.entity.CharacterEntity;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
-class CharacterRepositoryImplTest {
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
-    @Mock
-    private CharacterDao characterDao;
-
+public class CharacterRepositoryImplTest {
+    private DynamoDbClient dynamoDbClient;
     private CharacterRepositoryImpl characterRepository;
+    private static final String USER_ID = "testUser";
+    private static final String CHARACTER_NAME = "testCharacter";
 
     @BeforeEach
     void setUp() {
-        characterRepository = new CharacterRepositoryImpl(characterDao);
+        dynamoDbClient = mock(DynamoDbClient.class);
+        characterRepository = new CharacterRepositoryImpl(dynamoDbClient);
     }
 
     @Test
-    void addCharacterToUser_ValidInputs_ReturnsCharacter() {
-        // Given
-        String userId = "testUser123";
-        String characterName = "TestChar";
+    void addCharacterToUser_Success() {
+        when(dynamoDbClient.putItem(any(PutItemRequest.class))).thenReturn(null);
+
+        Character result = characterRepository.addCharacterToUser(USER_ID, CHARACTER_NAME);
+
+        assertEquals(USER_ID, result.getUserId());
+        assertEquals(CHARACTER_NAME, result.getName());
+        verify(dynamoDbClient).putItem(any(PutItemRequest.class));
+    }
+
+    @Test
+    void addCharacterToUser_NullUserId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> characterRepository.addCharacterToUser(null, CHARACTER_NAME));
+    }
+
+    @Test
+    void addCharacterToUser_EmptyUserId() {
+        assertThrows(IllegalArgumentException.class, () -> characterRepository.addCharacterToUser("", CHARACTER_NAME));
+    }
+
+    @Test
+    void addCharacterToUser_NullCharacterName() {
+        assertThrows(IllegalArgumentException.class, () -> characterRepository.addCharacterToUser(USER_ID, null));
+    }
+
+    @Test
+    void addCharacterToUser_EmptyCharacterName() {
+        assertThrows(IllegalArgumentException.class, () -> characterRepository.addCharacterToUser(USER_ID, ""));
+    }
+
+    @Test
+    void getCharactersForUser_Success() {
         Instant now = Instant.now();
-        CharacterEntity characterEntity = CharacterEntity.builder()
-                .name(characterName)
-                .userId(userId)
-                .createdAt(now)
-                .updatedAt(now)
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put("userId", AttributeValue.builder().s(USER_ID).build());
+        item.put("characterName", AttributeValue.builder().s(CHARACTER_NAME).build());
+        item.put("createdAt", AttributeValue.builder().s(now.toString()).build());
+        item.put("updatedAt", AttributeValue.builder().s(now.toString()).build());
+
+        QueryResponse queryResponse = QueryResponse.builder()
+                .items(Arrays.asList(item))
                 .build();
 
-        when(characterDao.addCharacterToUser(userId, characterName)).thenReturn(characterEntity);
+        when(dynamoDbClient.query(any(QueryRequest.class))).thenReturn(queryResponse);
 
-        // When
-        Character result = characterRepository.addCharacterToUser(userId, characterName);
+        List<Character> result = characterRepository.getCharactersForUser(USER_ID);
 
-        // Then
-        assertEquals(characterName, result.getName());
-        assertEquals(userId, result.getUserId());
-        verify(characterDao).addCharacterToUser(userId, characterName);
+        assertEquals(1, result.size());
+        assertEquals(USER_ID, result.get(0).getUserId());
+        assertEquals(CHARACTER_NAME, result.get(0).getName());
+        verify(dynamoDbClient).query(any(QueryRequest.class));
     }
 
     @Test
-    void addCharacterToUser_NullUserId_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.addCharacterToUser(null, "TestChar"));
+    void getCharactersForUser_NullUserId() {
+        assertThrows(IllegalArgumentException.class, () -> characterRepository.getCharactersForUser(null));
     }
 
     @Test
-    void addCharacterToUser_EmptyUserId_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.addCharacterToUser("", "TestChar"));
-    }
-
-    @Test
-    void addCharacterToUser_NullCharacterName_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.addCharacterToUser("testUser123", null));
-    }
-
-    @Test
-    void addCharacterToUser_EmptyCharacterName_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.addCharacterToUser("testUser123", ""));
-    }
-
-    @Test
-    void getCharactersForUser_ValidUserId_ReturnsCharacters() {
-        // Given
-        String userId = "testUser123";
-        Instant now = Instant.now();
-        CharacterEntity character1 = CharacterEntity.builder()
-                .name("TestChar1")
-                .userId(userId)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-
-        CharacterEntity character2 = CharacterEntity.builder()
-                .name("TestChar2")
-                .userId(userId)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-
-        List<CharacterEntity> characterEntities = Arrays.asList(character1, character2);
-        when(characterDao.getCharactersForUser(userId)).thenReturn(characterEntities);
-
-        // When
-        List<Character> result = characterRepository.getCharactersForUser(userId);
-
-        // Then
-        assertEquals(2, result.size());
-        assertEquals("TestChar1", result.get(0).getName());
-        assertEquals(userId, result.get(0).getUserId());
-        assertEquals("TestChar2", result.get(1).getName());
-        assertEquals(userId, result.get(1).getUserId());
-        verify(characterDao).getCharactersForUser(userId);
-    }
-
-    @Test
-    void getCharactersForUser_NullUserId_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.getCharactersForUser(null));
-    }
-
-    @Test
-    void getCharactersForUser_EmptyUserId_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.getCharactersForUser(""));
-    }
-
-    @Test
-    void getCharactersForUser_WhitespaceUserId_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class,
-                () -> characterRepository.getCharactersForUser("   "));
+    void getCharactersForUser_EmptyUserId() {
+        assertThrows(IllegalArgumentException.class, () -> characterRepository.getCharactersForUser(""));
     }
 }

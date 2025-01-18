@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +44,7 @@ class GetCharactersForUserHandlerTest {
     void handleRequest_ValidInput_ReturnsSuccessResponse() {
         // Given
         String userId = "testUser123";
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         List<Character> characters = Arrays.asList(
                 Character.builder()

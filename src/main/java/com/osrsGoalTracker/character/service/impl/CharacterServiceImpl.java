@@ -41,6 +41,20 @@ public class CharacterServiceImpl implements CharacterService {
 
     @Override
     public Character addCharacterToUser(String userId, String characterName) {
-        return characterRepository.addCharacterToUser(userId, characterName);
+        if (userId == null || userId.trim().isEmpty()) {
+            log.error("User ID cannot be null or empty");
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+
+        if (characterName == null || characterName.trim().isEmpty()) {
+            log.error("Character name cannot be null or empty");
+            throw new IllegalArgumentException("Character name cannot be null or empty");
+        }
+
+        String trimmedUserId = userId.trim();
+        String trimmedCharacterName = characterName.trim();
+
+        log.info("Adding character {} to user {}", trimmedCharacterName, trimmedUserId);
+        return characterRepository.addCharacterToUser(trimmedUserId, trimmedCharacterName);
     }
 }

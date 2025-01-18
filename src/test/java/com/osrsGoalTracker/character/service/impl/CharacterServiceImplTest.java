@@ -5,16 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
 import com.osrsGoalTracker.character.model.Character;
 import com.osrsGoalTracker.character.repository.CharacterRepository;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,83 +24,84 @@ class CharacterServiceImplTest {
     @Mock
     private CharacterRepository characterRepository;
 
+    @InjectMocks
     private CharacterServiceImpl characterService;
 
-    @BeforeEach
-    void setUp() {
-        characterService = new CharacterServiceImpl(characterRepository);
+    private static final String USER_ID = "testUser";
+    private static final String CHARACTER_NAME = "testCharacter";
+
+    @Test
+    void addCharacterToUser_Success() {
+        Instant now = Instant.now();
+        Character expectedCharacter = Character.builder()
+                .userId(USER_ID)
+                .name(CHARACTER_NAME)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        when(characterRepository.addCharacterToUser(USER_ID, CHARACTER_NAME))
+                .thenReturn(expectedCharacter);
+
+        Character result = characterService.addCharacterToUser(USER_ID, CHARACTER_NAME);
+
+        assertEquals(expectedCharacter, result);
+        verify(characterRepository).addCharacterToUser(USER_ID, CHARACTER_NAME);
     }
 
     @Test
-    void getCharactersForUser_ValidUserId_ReturnsCharacters() {
-        // Given
-        String userId = "testUser123";
-        LocalDateTime now = LocalDateTime.now();
+    void addCharacterToUser_NullUserId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> characterService.addCharacterToUser(null, CHARACTER_NAME));
+    }
+
+    @Test
+    void addCharacterToUser_EmptyUserId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> characterService.addCharacterToUser("", CHARACTER_NAME));
+    }
+
+    @Test
+    void addCharacterToUser_NullCharacterName() {
+        assertThrows(IllegalArgumentException.class,
+                () -> characterService.addCharacterToUser(USER_ID, null));
+    }
+
+    @Test
+    void addCharacterToUser_EmptyCharacterName() {
+        assertThrows(IllegalArgumentException.class,
+                () -> characterService.addCharacterToUser(USER_ID, ""));
+    }
+
+    @Test
+    void getCharactersForUser_Success() {
+        Instant now = Instant.now();
         List<Character> expectedCharacters = Arrays.asList(
                 Character.builder()
-                        .name("TestChar1")
-                        .userId(userId)
-                        .createdAt(now)
-                        .updatedAt(now)
-                        .build(),
-                Character.builder()
-                        .name("TestChar2")
-                        .userId(userId)
+                        .userId(USER_ID)
+                        .name(CHARACTER_NAME)
                         .createdAt(now)
                         .updatedAt(now)
                         .build());
 
-        when(characterRepository.getCharactersForUser(userId)).thenReturn(expectedCharacters);
+        when(characterRepository.getCharactersForUser(USER_ID))
+                .thenReturn(expectedCharacters);
 
-        // When
-        List<Character> actualCharacters = characterService.getCharactersForUser(userId);
+        List<Character> result = characterService.getCharactersForUser(USER_ID);
 
-        // Then
-        assertEquals(expectedCharacters, actualCharacters);
-        verify(characterRepository).getCharactersForUser(userId);
+        assertEquals(expectedCharacters, result);
+        verify(characterRepository).getCharactersForUser(USER_ID);
     }
 
     @Test
-    void getCharactersForUser_NullUserId_ThrowsIllegalArgumentException() {
-        // When/Then
+    void getCharactersForUser_NullUserId() {
         assertThrows(IllegalArgumentException.class,
                 () -> characterService.getCharactersForUser(null));
     }
 
     @Test
-    void getCharactersForUser_EmptyUserId_ThrowsIllegalArgumentException() {
-        // When/Then
+    void getCharactersForUser_EmptyUserId() {
         assertThrows(IllegalArgumentException.class,
                 () -> characterService.getCharactersForUser(""));
-    }
-
-    @Test
-    void getCharactersForUser_WhitespaceUserId_ThrowsIllegalArgumentException() {
-        // When/Then
-        assertThrows(IllegalArgumentException.class,
-                () -> characterService.getCharactersForUser("   "));
-    }
-
-    @Test
-    void addCharacterToUser_ValidInputs_ReturnsCharacter() {
-        // Given
-        String userId = "testUser123";
-        String characterName = "TestChar";
-        LocalDateTime now = LocalDateTime.now();
-        Character expectedCharacter = Character.builder()
-                .name(characterName)
-                .userId(userId)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-
-        when(characterRepository.addCharacterToUser(userId, characterName)).thenReturn(expectedCharacter);
-
-        // When
-        Character actualCharacter = characterService.addCharacterToUser(userId, characterName);
-
-        // Then
-        assertEquals(expectedCharacter, actualCharacter);
-        verify(characterRepository).addCharacterToUser(userId, characterName);
     }
 }

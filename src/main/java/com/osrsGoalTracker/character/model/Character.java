@@ -1,6 +1,6 @@
 package com.osrsGoalTracker.character.model;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import lombok.Builder;
 import lombok.Value;
@@ -24,10 +24,10 @@ public class Character {
     /**
      * The timestamp when the character was created.
      */
-    private final LocalDateTime createdAt;
+    private final Instant createdAt;
 
     /**
      * The timestamp when the character was last updated.
      */
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 }
