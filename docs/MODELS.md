@@ -17,28 +17,12 @@ All models in the service follow these principles:
 @Value
 @Builder
 public class Character {
+    String userId;
     String name;
     LocalDateTime lastUpdated;
-    List<Skill> skills;
-    List<Activity> activities;
+    LocalDateTime createdAt;
 }
 
-@Value
-@Builder
-public class Skill {
-    String name;
-    int level;
-    long experience;
-    int rank;
-}
-
-@Value
-@Builder
-public class Activity {
-    String name;
-    int score;
-    int rank;
-}
 ```
 
 ## Request/Response DTOs
@@ -75,4 +59,7 @@ public class CharacterEntity {
     
     @DynamoDBAttribute
     private String lastUpdated;
+
+    @DynamoDBAttribute
+    private String createdAt;
 } 
