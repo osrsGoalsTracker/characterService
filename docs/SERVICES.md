@@ -15,26 +15,28 @@ The service layer contains the core business logic of the application. Services 
 ### Character Service
 
 ```java
+/**
+ * Service interface for character-related operations.
+ */
+
 public interface CharacterService {
     /**
-     * Associates a character with a user.
+     * Retrieves all characters associated with a user.
      *
-     * @param userId The user's ID
-     * @param request The character association request
-     * @return The created association
-     * @throws ResourceNotFoundException if user doesn't exist
-     * @throws ConflictException if character already associated
-     */
-    Character addCharacterToUser(String userId, AddCharacterToUserRequest request);
-
-    /**
-     * Gets all characters for a user.
-     *
-     * @param userId The user's ID
-     * @return List of characters
-     * @throws ResourceNotFoundException if user doesn't exist
+     * @param userId The ID of the user
+     * @return A list of characters associated with the user
      */
     List<Character> getCharactersForUser(String userId);
+
+    /**
+     * Adds a character to a user's account.
+     *
+     * @param userId        The ID of the user
+     * @param characterName The name of the character to add
+     * @return The added character
+     */
+    Character addCharacterToUser(String userId, String characterName);
+}
 }
 ```
 
