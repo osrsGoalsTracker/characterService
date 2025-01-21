@@ -1,8 +1,8 @@
-# Project Architecture
+# Layered Architecture Rule Set
 
-## Layered Architecture Rule Set
+This rule set defines how to organize and implement a modular layered architecture for a product, including both domain services (e.g., `UserService`, `CharacterService`) and orchestration Lambdas for event-driven workflows. It outlines layers, interaction rules, service boundaries, and specific patterns to handle cross-cutting concerns like events and shared resources.
 
-This rule set defines how to organize and implement a modular layered architecture for the character service. It outlines layers, interaction rules, service boundaries, and specific patterns to handle cross-cutting concerns.
+---
 
 ## Rule Set
 
@@ -10,7 +10,7 @@ This rule set defines how to organize and implement a modular layered architectu
 
 #### Domain Layer (Service-Specific)
 
-The character domain has its own service responsible for managing the business logic and data access for its entities. It is structured into three sub-layers:
+Each domain (e.g., `User`, `Character`, `Goal`) has its own service responsible for managing the business logic and data access for its entities. It is structured into three sub-layers:
 
 1. **Handler Layer**
    - Contains entry points for APIs (e.g., Lambda handlers or controllers).
@@ -19,103 +19,97 @@ The character domain has its own service responsible for managing the business l
 
 2. **Service Layer**
    - Encapsulates business logic for the domain.
-   - Uses repository interfaces to fetch or persist data.
+   - Uses repository interfaces to fetch or persist data. Uses external layer interfaces to communicate with external systems.
    - Only depends on the repository layer or other services via interfaces.
 
 3. **Repository Layer**
    - Abstracts data access logic.
    - Interacts with the underlying data store (e.g., DynamoDB, RDBMS).
-   - Provides methods scoped to the domain (e.g., `findCharacterByName`).
+   - Provides methods scoped to the domain (e.g., `findUserById`, `saveGoal`).
    - Does not call the service layer.
 
-## Layer Definitions
+4. ** External layer**
+   - Responsible for managing communication with third-party systems, APIs, or services. This layer:
+   - Abstracts details like HTTP request/response formats, authentication, and API endpoints.
+   - Provides a clean and reusable interface for external communication.
+   - Decouples external systems from domain logic.
+   - Calls no other layers.
 
-### 1. Handler Layer (`*.handler`)
-- Entry points for AWS Lambda functions
-- Handles API Gateway events and responses
-- Follows a strict 4-step pattern:
-  1. Parse input
-  2. Validate input
-  3. Run service function
-  4. Return output
-- Only depends on the service layer
-- Located in `*.handler` packages
+5. **Common Layer**
+   - Contains reusable components across domains:
+   - Shared models - Defines domain-agnostic objects (e.g., events like `GoalCreationEvent`) that are shared across services. 
+   - Shared utilities - Includes helpers for common tasks (e.g., event publishing, validation).
 
-### 2. Service Layer (`*.service`)
-- Contains core business logic
-- Defines interfaces and implementations
-- Uses repository interfaces for data access
-- Manages transactions and orchestration
-- Located in `*.service` packages
-- Implementations in `*.service.impl`
+---
 
-### 3. Repository Layer (`*.repository`)
-- Abstracts data persistence operations
-- Provides DynamoDB implementations
-- Handles data mapping and queries
-- Located in `*.repository` packages
-- Implementations in `*.repository.impl`
-
-### 4. Model Layer (`*.model`)
-- Domain models using Lombok
-- Request/Response DTOs
-- Uses `@Value` and `@Builder` for immutability
-- Located in `*.model` packages
-
-### 5. Dependency Injection Layer (`*.di`)
-- Google Guice modules for the character domain
-- Binds interfaces to implementations
-- Located in `*.di` packages
-
-## Domain Module
-
-### Character Domain (`com.osrsGoalTracker.character`)
-- OSRS character management
-- Character-user associations
-- Character metadata
-
-## Layer Interaction Rules
+### Rules for Inter-Layer Interaction
 
 1. **Handler Layer**
-   - Can only call Service layer
-   - Must follow 4-step pattern
-   - Must handle API Gateway events
+   - Allowed to call: Service layer.
+   - Not allowed to call directly: Repository layer or shared utilities.
 
 2. **Service Layer**
-   - Can call Repository layer
-   - Can call other Services
-   - Manages transactions
+   - Allowed to call: Repository layer, other services via interfaces, external layer via interfaces, shared utilities.
+   - Not allowed to call directly: Handlers.
 
 3. **Repository Layer**
-   - Can only access data store
-   - No service layer calls
-   - No cross-repository calls
+   - Allowed to call: Data store (e.g., DynamoDB SDK).
+   - Not allowed to call: Handlers, service layer, or orchestration modules.
 
-## Package Structure Example (Character Domain)
+4. **External Layer**
+   - Allowed to call: external systems via interfaces.
+   - Not allowed to call directly: Repository layer, handlers, service layer.
+
+---
+
+### Rules for Inter-Service Interaction
+
+1. **Direct Service-to-Service Interaction**
+   - Use interfaces to define contracts for interactions (e.g., `CharacterService` interface for fetching character data).
+   - Use dependency injection to bind the correct implementation.
+
+2. **Event-Driven Interaction**
+   - Services can publish domain events (e.g., `GoalCreatedEvent`) to the event bus.
+   - Other services or orchestration Lambdas consume these events and react accordingly.
+
+3. **Avoid Cross-Service Repository Access**
+   - Services should never directly query another service’s repository. Always go through the service layer or use events for decoupled communication.
+
+---
+
+### Example Tree Structure: Deep Dive into CharacterService
+
+**Folder Structure** (character service example)
 
 ```
-com.osrsGoalTracker.character/
-├── di/
-│   └── CharacterModule.java
-├── handler/
-│   ├── AddCharacterToUserHandler.java
-│   ├── GetCharactersForUserHandler.java
-│   ├── request/
-│   │   └── AddCharacterToUserRequest.java
-│   └── response/
-│       └── GetCharactersForUserResponse.java
-├── model/
-│   ├── Character.java
-│   ├── Skill.java
-│   └── Activity.java
-├── repository/
-│   ├── CharacterRepository.java
-│   └── impl/
-│       └── CharacterRepositoryImpl.java
-└── service/
-    ├── CharacterService.java
-    └── impl/
-        └── CharacterServiceImpl.java
+src/
+├── main/
+│   ├── java/
+│   │   ├── com/
+│   │   │   ├── example/
+│   │   │   │   ├── character/
+│   │   │   │   │   ├── handler/
+│   │   │   │   │   │   ├── CharacterHandler.java
+│   │   │   │   │   ├── service/
+│   │   │   │   │   │   ├── CharacterService.java
+│   │   │   │   │   │   ├── impl/
+│   │   │   │   │   │   │   ├── CharacterServiceImpl.java
+│   │   │   │   │   ├── repository/
+│   │   │   │   │   │   ├── CharacterRepository.java
+│   │   │   │   │   │   ├── impl/
+│   │   │   │   │   │   │   ├── CharacterRepositoryImpl.java
+│   │   │   │   │   ├── model/
+│   │   │   │   │   │   ├── Character.java
+│   │   │   │   │   │   ├── CreateCharacterRequest.java
+│   │   │   │   │   │   ├── CreateCharacterResponse.java
+│   │   │   │   │   ├── di/
+│   │   │   │   │   │   ├── CharacterModule.java
+│   │   │   │   │   ├── external/
+│   │   │   │   │   │   ├── GameApiClient.java
+│   │   │   │   │   │   ├── impl/
+│   │   │   │   │   │   │   ├── ExternalGameApiClientImpl.java
+│   │   │   │   │   │   ├── model/
+│   │   │   │   │   │   │   ├── GameCharacterResponse.java
 ```
 
 ## Development Guidelines
